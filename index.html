@@ -149,7 +149,7 @@
     display:flex;align-items:center;gap:6px;
   }
   .person-avatar{
-    width:20px;height:20px;
+    width:30px;height:30px;
     border-radius:50%;
     object-fit:cover;
     flex:0 0 auto;
@@ -159,7 +159,7 @@
     display:flex;align-items:center;justify-content:center;
     font-family:'Fraunces',serif;
     font-weight:600;
-    font-size:11px;
+    font-size:14px;
     color:var(--ink);
   }
   .person-avatar.p1, .person-avatar-fallback.p1{border-color:var(--teal);}
@@ -236,12 +236,12 @@
   .photo-hint{font-size:12.5px;color:var(--muted);}
   .avatar-preview-wrap{
     position:relative;
-    width:44px;height:44px;
+    width:60px;height:60px;
     flex:0 0 auto;
   }
   .avatar-preview-wrap .person-avatar{
-    width:44px;height:44px;
-    font-size:17px;
+    width:60px;height:60px;
+    font-size:22px;
   }
   .photo-remove{
     position:absolute;top:-7px;right:-7px;
@@ -352,6 +352,21 @@
     .entry-date{width:auto;font-size:11.5px;}
     .entry-who{width:56px;}
   }
+
+  /* --- Gráfica --- */
+  .chart-card{margin-top:20px;}
+  .chart-legend{
+    display:flex;gap:18px;
+    font-size:12.5px;color:var(--muted);
+    margin-bottom:14px;
+  }
+  .chart-legend span{display:flex;align-items:center;gap:6px;}
+  .chart-svg{width:100%;height:auto;display:block;}
+  .chart-month-label{
+    fill:var(--muted);
+    font-size:10.5px;
+    font-family:'Inter',sans-serif;
+  }
 </style>
 </head>
 <body>
@@ -387,7 +402,7 @@
         <div class="form-row">
           <div class="field">
             <label>Cantidad</label>
-            <input type="number" id="amountInput" placeholder="0.00" min="0" step="0.01">
+            <input type="number" id="amountInput" placeholder="0" min="0" step="1">
           </div>
           <div class="field">
             <label>Fecha</label>
@@ -438,7 +453,7 @@ let state = {
 let selectedPerson = 1;
 let saving = false;
 
-const fmt = (n) => '$' + Number(n || 0).toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmt = (n) => '$' + Math.round(Number(n) || 0).toLocaleString('es-MX');
 const fmtDate = (iso) => {
   const d = new Date(iso + 'T00:00:00');
   return d.toLocaleDateString('es-MX', {day:'numeric', month:'long', year:'numeric'});
@@ -588,7 +603,7 @@ function renderResumen(){
     </div>
 
     <div class="settings-toggle">
-      <button type="button" id="toggleSettings">Editar nombres y metas</button>
+      <button type="button" id="toggleSettings">Editar nombres, metas y foto</button>
     </div>
     <div class="settings-panel" id="settingsPanel">
       <div class="person-settings-block">
@@ -598,7 +613,7 @@ function renderResumen(){
         </div>
         <div class="field">
           <label>Meta de ${settings.name1 || 'persona 1'}</label>
-          <input type="number" id="goal1Input" value="${settings.goal1 || ''}" min="0" step="0.01">
+          <input type="number" id="goal1Input" value="${settings.goal1 || ''}" min="0" step="1">
         </div>
         <div class="field">
           <label>Foto de ${settings.name1 || 'persona 1'}</label>
@@ -612,7 +627,7 @@ function renderResumen(){
         </div>
         <div class="field">
           <label>Meta de ${settings.name2 || 'persona 2'}</label>
-          <input type="number" id="goal2Input" value="${settings.goal2 || ''}" min="0" step="0.01">
+          <input type="number" id="goal2Input" value="${settings.goal2 || ''}" min="0" step="1">
         </div>
         <div class="field">
           <label>Foto de ${settings.name2 || 'persona 2'}</label>
@@ -680,7 +695,7 @@ function renderAvatarField(n){
       const hint = field.querySelector('.photo-hint');
       hint.textContent = 'Procesando imagen...';
       try {
-        const dataUrl = await resizeImageFile(file, 100, 0.6);
+        const dataUrl = await resizeImageFile(file, 140, 0.65);
         if (n===1) pendingAvatar1 = dataUrl; else pendingAvatar2 = dataUrl;
         renderAvatarField(n);
       } catch(err){
@@ -732,10 +747,67 @@ function renderHistory(){
   });
 }
 
+function renderChart(){
+  const settings = state.settings;
+  const entries = state.entries;
+  const area = document.getElementById('chartArea');
+
+  if (!entries.length){
+    area.innerHTML = '<div class="empty-state">Aún no hay datos suficientes para graficar.</div>';
+    return;
+  }
+
+  const map = {};
+  entries.forEach(e=>{
+    const key = e.date.slice(0,7);
+    if (!map[key]) map[key] = { t1:0, t2:0 };
+    if (e.person===1) map[key].t1 += Number(e.amount);
+    else map[key].t2 += Number(e.amount);
+  });
+
+  const keys = Object.keys(map).sort();
+  const shown = keys.slice(-6);
+  const maxVal = Math.max(1, ...shown.map(k => Math.max(map[k].t1, map[k].t2)));
+
+  const barW = 18, gap = 10, groupGap = 26, chartH = 140, leftPad = 14, topPad = 10;
+  const groupW = barW*2 + gap;
+  const totalW = shown.length*groupW + Math.max(0, shown.length-1)*groupGap + leftPad*2;
+
+  const monthLabel = (key) => {
+    const [y, m] = key.split('-');
+    const d = new Date(Number(y), Number(m)-1, 1);
+    const label = d.toLocaleDateString('es-MX', { month:'short' });
+    return label.charAt(0).toUpperCase() + label.slice(1).replace('.','');
+  };
+
+  let bars = '';
+  shown.forEach((key, i) => {
+    const x = leftPad + i*(groupW+groupGap);
+    const h1 = (map[key].t1/maxVal)*chartH;
+    const h2 = (map[key].t2/maxVal)*chartH;
+    bars += `
+      <rect x="${x}" y="${topPad+chartH-h1}" width="${barW}" height="${Math.max(h1,1)}" rx="3" fill="var(--teal)"></rect>
+      <rect x="${x+barW+gap}" y="${topPad+chartH-h2}" width="${barW}" height="${Math.max(h2,1)}" rx="3" fill="var(--brick)"></rect>
+      <text x="${x+barW+gap/2}" y="${topPad+chartH+18}" text-anchor="middle" class="chart-month-label">${monthLabel(key)}</text>
+    `;
+  });
+
+  area.innerHTML = `
+    <div class="chart-legend">
+      <span><span class="dot p1"></span>${settings.name1 || 'P1'}</span>
+      <span><span class="dot p2"></span>${settings.name2 || 'P2'}</span>
+    </div>
+    <svg viewBox="0 0 ${totalW} ${chartH+topPad+30}" class="chart-svg" preserveAspectRatio="xMinYMid meet">
+      ${bars}
+    </svg>
+  `;
+}
+
 function render(){
   renderResumen();
   renderPersonPicker();
   renderHistory();
+  renderChart();
   updateSaveButtons();
 }
 
