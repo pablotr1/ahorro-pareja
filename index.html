@@ -149,7 +149,7 @@
     display:flex;align-items:center;gap:6px;
   }
   .person-avatar{
-    width:30px;height:30px;
+    width:45px;height:45px;
     border-radius:50%;
     object-fit:cover;
     flex:0 0 auto;
@@ -159,7 +159,7 @@
     display:flex;align-items:center;justify-content:center;
     font-family:'Fraunces',serif;
     font-weight:600;
-    font-size:14px;
+    font-size:20px;
     color:var(--ink);
   }
   .person-avatar.p1, .person-avatar-fallback.p1{border-color:var(--teal);}
@@ -236,12 +236,12 @@
   .photo-hint{font-size:12.5px;color:var(--muted);}
   .avatar-preview-wrap{
     position:relative;
-    width:60px;height:60px;
+    width:90px;height:90px;
     flex:0 0 auto;
   }
   .avatar-preview-wrap .person-avatar{
-    width:60px;height:60px;
-    font-size:22px;
+    width:90px;height:90px;
+    font-size:33px;
   }
   .photo-remove{
     position:absolute;top:-7px;right:-7px;
@@ -361,7 +361,7 @@
     margin-bottom:14px;
   }
   .chart-legend span{display:flex;align-items:center;gap:6px;}
-  .chart-svg{width:100%;height:auto;display:block;}
+  .chart-svg{width:100%;height:auto;max-height:160px;display:block;}
   .chart-month-label{
     fill:var(--muted);
     font-size:10.5px;
@@ -695,7 +695,7 @@ function renderAvatarField(n){
       const hint = field.querySelector('.photo-hint');
       hint.textContent = 'Procesando imagen...';
       try {
-        const dataUrl = await resizeImageFile(file, 140, 0.65);
+        const dataUrl = await resizeImageFile(file, 200, 0.7);
         if (n===1) pendingAvatar1 = dataUrl; else pendingAvatar2 = dataUrl;
         renderAvatarField(n);
       } catch(err){
@@ -769,7 +769,7 @@ function renderChart(){
   const shown = keys.slice(-6);
   const maxVal = Math.max(1, ...shown.map(k => Math.max(map[k].t1, map[k].t2)));
 
-  const barW = 18, gap = 10, groupGap = 26, chartH = 140, leftPad = 14, topPad = 10;
+  const barW = 12, gap = 7, groupGap = 18, chartH = 80, leftPad = 10, topPad = 8;
   const groupW = barW*2 + gap;
   const totalW = shown.length*groupW + Math.max(0, shown.length-1)*groupGap + leftPad*2;
 
