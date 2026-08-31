@@ -222,6 +222,53 @@
     align-items:center;
     gap:12px;
   }
+  .goals-field{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .goal-chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .goal-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:5px 8px 5px 10px;
+    border-radius:999px;
+    font-size:12.5px;
+    font-weight:500;
+    border:1px solid var(--line);
+  }
+  .goal-chip.p1{background:var(--teal-soft);color:var(--teal);}
+  .goal-chip.p2{background:var(--brick-soft);color:var(--brick);}
+  .goal-chip-remove{
+    background:none;
+    color:inherit;
+    opacity:.65;
+    font-size:11px;
+    padding:0;
+    line-height:1;
+  }
+  .goal-chip-remove:hover{opacity:1;}
+  .goal-add-row{
+    display:flex;
+    gap:8px;
+  }
+  .goal-add-row input{flex:1;}
+  .goal-add-btn{
+    background:var(--bg);
+    color:var(--muted);
+    border:1px solid var(--line);
+    padding:8px 12px;
+    border-radius:8px;
+    font-size:13px;
+    font-weight:500;
+    white-space:nowrap;
+  }
+  .goal-add-btn:hover{border-color:var(--teal);color:var(--teal);}
   .photo-pick-btn{
     background:var(--bg);
     color:var(--muted);
@@ -447,7 +494,7 @@ const JSONBIN_MASTER_KEY = '$2a$10$0F7DfN4Nr14Hd6n0vAf5hu114cujRy4hydn4w8CtacFgE
 const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
 
 let state = {
-  settings: { name1: 'Pablo', name2: 'Eli', goal1: 4000, goal2: 4000 },
+  settings: { name1: 'Pablo', name2: 'Eli', goals1: [{name:'', amount:4000}], goals2: [{name:'', amount:4000}] },
   entries: []
 };
 let selectedPerson = 1;
@@ -501,6 +548,30 @@ function setStatus(text, isError){
   el.classList.toggle('error', !!isError);
 }
 
+function migrateSettings(){
+  const s = state.settings;
+  if (!Array.isArray(s.goals1)){
+    s.goals1 = s.goal1 ? [Number(s.goal1)] : [];
+  }
+  if (!Array.isArray(s.goals2)){
+    s.goals2 = s.goal2 ? [Number(s.goal2)] : [];
+  }
+  s.goals1 = s.goals1.map(g => (typeof g === 'object' && g !== null) ? g : { name:'', amount:Number(g) });
+  s.goals2 = s.goals2.map(g => (typeof g === 'object' && g !== null) ? g : { name:'', amount:Number(g) });
+}
+
+function nextGoalInfo(goalsArr, total){
+  const sorted = (goalsArr || [])
+    .filter(g => g && Number(g.amount) > 0)
+    .map(g => ({ name: g.name || '', amount: Number(g.amount) }))
+    .sort((a,b)=>a.amount-b.amount);
+  if (!sorted.length) return { next: null, allDone: false, sorted, doneCount: 0 };
+  const doneCount = sorted.filter(g => total >= g.amount).length;
+  const next = sorted.find(g => g.amount > total);
+  if (next === undefined) return { next: sorted[sorted.length-1], allDone: true, sorted, doneCount };
+  return { next, allDone: false, sorted, doneCount };
+}
+
 async function loadAll(){
   try {
     setStatus('Cargando datos...');
@@ -512,6 +583,7 @@ async function loadAll(){
     if (json && json.record && json.record.settings){
       state = json.record;
     }
+    migrateSettings();
     setStatus('');
   } catch(e) {
     console.error('No se pudo cargar', e);
@@ -556,28 +628,43 @@ function totals(){
   return { t1, t2, total: t1+t2 };
 }
 
+let pendingGoals1 = null;
+let pendingGoals2 = null;
+
 function renderResumen(){
   const settings = state.settings;
   const { t1, t2, total } = totals();
-  const goal1 = Number(settings.goal1 || 0);
-  const goal2 = Number(settings.goal2 || 0);
-  const goalTotal = goal1 + goal2;
-  const pct = goalTotal > 0 ? Math.min(100, (total/goalTotal)*100) : 0;
-  const pct1 = goal1 > 0 ? Math.min(100, (t1/goal1)*100) : 0;
-  const pct2 = goal2 > 0 ? Math.min(100, (t2/goal2)*100) : 0;
+  const info1 = nextGoalInfo(settings.goals1, t1);
+  const info2 = nextGoalInfo(settings.goals2, t2);
+  const nextAmt1 = info1.next ? info1.next.amount : 0;
+  const nextAmt2 = info2.next ? info2.next.amount : 0;
+  const combinedNext = nextAmt1 + nextAmt2;
+  const pct = combinedNext > 0 ? Math.min(100, (total/combinedNext)*100) : 0;
+  const pct1 = nextAmt1 > 0 ? Math.min(100, (t1/nextAmt1)*100) : 0;
+  const pct2 = nextAmt2 > 0 ? Math.min(100, (t2/nextAmt2)*100) : 0;
 
   document.getElementById('pageTitle').textContent =
     (settings.name1 || 'Persona 1') + ' & ' + (settings.name2 || 'Persona 2');
   document.getElementById('pageSubhead').textContent =
-    goalTotal > 0 ? 'Meta conjunta: ' + fmt(goalTotal) : 'Aún no has definido metas';
+    combinedNext > 0 ? 'Meta actual: ' + fmt(combinedNext) : 'Aún no has definido metas';
+
+  const personGoalLine = (info, pct) => {
+    if (!info.sorted.length) return 'Sin meta';
+    if (info.allDone) return `¡Metas cumplidas! (${info.doneCount}/${info.sorted.length})`;
+    const label = info.next.name ? `${info.next.name} (${fmt(info.next.amount)})` : fmt(info.next.amount);
+    return `${pct.toFixed(0)}% de ${label} · meta ${info.doneCount+1}/${info.sorted.length}`;
+  };
+
+  if (pendingGoals1 === null) pendingGoals1 = [...(settings.goals1 || [])];
+  if (pendingGoals2 === null) pendingGoals2 = [...(settings.goals2 || [])];
 
   const card = document.getElementById('resumenCard');
   card.innerHTML = `
     <div class="hero-label">Total ahorrado</div>
     <div class="hero-total">${fmt(total)}</div>
     <div class="goal-line">
-      <span>${goalTotal>0 ? pct.toFixed(0)+'% de la meta conjunta' : 'Sin meta definida'}</span>
-      <strong>${goalTotal>0 ? fmt(goalTotal) : ''}</strong>
+      <span>${combinedNext>0 ? pct.toFixed(0)+'% de la meta actual' : 'Sin meta definida'}</span>
+      <strong>${combinedNext>0 ? fmt(combinedNext) : ''}</strong>
     </div>
     <div class="track"><div class="track-fill" style="width:${pct}%"></div></div>
 
@@ -588,7 +675,7 @@ function renderResumen(){
           ${settings.name1 || 'Persona 1'}
         </div>
         <div class="person-amount">${fmt(t1)}</div>
-        <div class="person-goal-line">${goal1>0 ? pct1.toFixed(0)+'% de '+fmt(goal1) : 'Sin meta'}</div>
+        <div class="person-goal-line">${personGoalLine(info1, pct1)}</div>
         <div class="mini-track"><div class="mini-track-fill p1" style="width:${pct1}%"></div></div>
       </div>
       <div class="person-card p2">
@@ -597,7 +684,7 @@ function renderResumen(){
           ${settings.name2 || 'Persona 2'}
         </div>
         <div class="person-amount">${fmt(t2)}</div>
-        <div class="person-goal-line">${goal2>0 ? pct2.toFixed(0)+'% de '+fmt(goal2) : 'Sin meta'}</div>
+        <div class="person-goal-line">${personGoalLine(info2, pct2)}</div>
         <div class="mini-track"><div class="mini-track-fill p2" style="width:${pct2}%"></div></div>
       </div>
     </div>
@@ -612,8 +699,8 @@ function renderResumen(){
           <input type="text" id="name1Input" value="${settings.name1 || ''}">
         </div>
         <div class="field">
-          <label>Meta de ${settings.name1 || 'persona 1'}</label>
-          <input type="number" id="goal1Input" value="${settings.goal1 || ''}" min="0" step="1">
+          <label>Metas de ${settings.name1 || 'persona 1'} (nombre y monto, en el orden que las quieran ir cumpliendo)</label>
+          <div class="goals-field" id="goalsField1"></div>
         </div>
         <div class="field">
           <label>Foto de ${settings.name1 || 'persona 1'}</label>
@@ -626,8 +713,8 @@ function renderResumen(){
           <input type="text" id="name2Input" value="${settings.name2 || ''}">
         </div>
         <div class="field">
-          <label>Meta de ${settings.name2 || 'persona 2'}</label>
-          <input type="number" id="goal2Input" value="${settings.goal2 || ''}" min="0" step="1">
+          <label>Metas de ${settings.name2 || 'persona 2'} (nombre y monto, en el orden que las quieran ir cumpliendo)</label>
+          <div class="goals-field" id="goalsField2"></div>
         </div>
         <div class="field">
           <label>Foto de ${settings.name2 || 'persona 2'}</label>
@@ -640,6 +727,8 @@ function renderResumen(){
 
   renderAvatarField(1);
   renderAvatarField(2);
+  renderGoalsField(1);
+  renderGoalsField(2);
 
   document.getElementById('toggleSettings').addEventListener('click', ()=>{
     document.getElementById('settingsPanel').classList.toggle('open');
@@ -647,14 +736,63 @@ function renderResumen(){
   document.getElementById('saveSettingsBtn').addEventListener('click', async ()=>{
     state.settings.name1 = document.getElementById('name1Input').value.trim() || 'Persona 1';
     state.settings.name2 = document.getElementById('name2Input').value.trim() || 'Persona 2';
-    state.settings.goal1 = parseFloat(document.getElementById('goal1Input').value) || 0;
-    state.settings.goal2 = parseFloat(document.getElementById('goal2Input').value) || 0;
+    state.settings.goals1 = [...pendingGoals1].filter(g=>Number(g.amount)>0).sort((a,b)=>a.amount-b.amount);
+    state.settings.goals2 = [...pendingGoals2].filter(g=>Number(g.amount)>0).sort((a,b)=>a.amount-b.amount);
     if (pendingAvatar1 !== undefined) state.settings.avatar1 = pendingAvatar1;
     if (pendingAvatar2 !== undefined) state.settings.avatar2 = pendingAvatar2;
     pendingAvatar1 = undefined;
     pendingAvatar2 = undefined;
+    pendingGoals1 = null;
+    pendingGoals2 = null;
     await persistAll();
     render();
+  });
+}
+
+function renderGoalsField(n){
+  const list = n===1 ? pendingGoals1 : pendingGoals2;
+  const cls = n===1 ? 'p1' : 'p2';
+  const field = document.getElementById('goalsField' + n);
+  if (!field) return;
+
+  const sorted = [...list].filter(g=>Number(g.amount)>0).sort((a,b)=>a.amount-b.amount);
+  const chips = sorted.map((g) => `
+    <span class="goal-chip ${cls}">
+      ${g.name ? g.name + ' · ' : ''}${fmt(g.amount)}
+      <button type="button" class="goal-chip-remove" data-n="${n}" data-val="${g.amount}" data-name="${(g.name||'').replace(/"/g,'&quot;')}" title="Quitar">✕</button>
+    </span>
+  `).join('') || '<span class="photo-hint">Sin metas todavía</span>';
+
+  field.innerHTML = `
+    <div class="goal-chips">${chips}</div>
+    <div class="goal-add-row">
+      <input type="text" id="goalNameInput${n}" placeholder="Nombre (opcional)">
+      <input type="number" id="goalNewInput${n}" placeholder="Monto" min="0" step="1">
+      <button type="button" class="goal-add-btn" id="goalAddBtn${n}">Agregar</button>
+    </div>
+  `;
+
+  field.querySelectorAll('.goal-chip-remove').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const val = Number(btn.dataset.val);
+      const name = btn.dataset.name || '';
+      const arr = n===1 ? pendingGoals1 : pendingGoals2;
+      const idx = arr.findIndex(g => Number(g.amount)===val && (g.name||'')===name);
+      if (idx > -1) arr.splice(idx, 1);
+      renderGoalsField(n);
+    });
+  });
+
+  document.getElementById('goalAddBtn' + n).addEventListener('click', ()=>{
+    const nameInput = document.getElementById('goalNameInput' + n);
+    const amountInput = document.getElementById('goalNewInput' + n);
+    const val = parseFloat(amountInput.value);
+    if (!val || val <= 0) { amountInput.focus(); return; }
+    const arr = n===1 ? pendingGoals1 : pendingGoals2;
+    arr.push({ name: nameInput.value.trim(), amount: val });
+    nameInput.value = '';
+    amountInput.value = '';
+    renderGoalsField(n);
   });
 }
 
@@ -852,9 +990,13 @@ document.getElementById('addBtn').addEventListener('click', async ()=>{
 document.getElementById('resetBtn').addEventListener('click', async ()=>{
   if (!confirm('Esto borrará todos los registros y la configuración para ambos. ¿Continuar?')) return;
   state = {
-    settings: { name1: 'Pablo', name2: 'Eli', goal1: 4000, goal2: 4000 },
+    settings: { name1: 'Pablo', name2: 'Eli', goals1: [{name:'', amount:4000}], goals2: [{name:'', amount:4000}] },
     entries: []
   };
+  pendingGoals1 = null;
+  pendingGoals2 = null;
+  pendingAvatar1 = undefined;
+  pendingAvatar2 = undefined;
   await persistAll();
   render();
 });
