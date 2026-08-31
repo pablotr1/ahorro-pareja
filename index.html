@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ahorro en pareja</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0C0A;
+    --surface:#17190F;
+    --ink:#EDEFE7;
+    --muted:#93A092;
+    --line:#2B2E27;
+    --teal:#4FAE9C;
+    --teal-soft:#173733;
+    --brick:#D08A6C;
+    --brick-soft:#3A2620;
+    --gold:#D9AE5A;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:1040px;
+    margin:0 auto;
+    padding:28px 20px 80px;
+  }
+  header.top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:clamp(28px,4vw,38px);
+    margin:0 0 4px 0;
+    letter-spacing:-0.01em;
+  }
+  .subhead{
+    color:var(--muted);
+    font-size:14.5px;
+    margin:0;
+  }
+  .status-line{
+    font-size:12.5px;
+    color:var(--muted);
+    margin:0 0 22px 0;
+  }
+  .status-line.error{color:var(--brick);}
+  button{
+    font-family:'Inter',sans-serif;
+    cursor:pointer;
+    border:none;
+  }
+  .icon-btn{
+    background:transparent;
+    color:var(--muted);
+    font-size:13.5px;
+    padding:8px 12px;
+    border:1px solid var(--line);
+    border-radius:9px;
+    white-space:nowrap;
+  }
+  .icon-btn:hover{background:var(--surface);border-color:var(--teal);color:var(--teal);}
+
+  .grid{
+    display:grid;
+    grid-template-columns:340px 1fr;
+    gap:22px;
+  }
+  @media (max-width:760px){
+    .grid{grid-template-columns:1fr;}
+  }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:22px;
+  }
+
+  /* --- Resumen --- */
+  .hero-total{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:clamp(38px,7vw,52px);
+    line-height:1;
+    margin:2px 0 2px 0;
+  }
+  .hero-label{
+    color:var(--muted);
+    font-size:13px;
+    margin-bottom:2px;
+  }
+  .goal-line{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-top:4px;
+    font-size:13.5px;
+    color:var(--muted);
+  }
+  .goal-line strong{color:var(--ink);font-weight:600;}
+  .track{
+    position:relative;
+    height:10px;
+    background:var(--bg);
+    border-radius:999px;
+    margin:10px 0 18px 0;
+    overflow:hidden;
+    border:1px solid var(--line);
+  }
+  .track-fill{
+    position:absolute;top:0;left:0;bottom:0;
+    background:linear-gradient(90deg,var(--teal),var(--gold));
+    border-radius:999px;
+    transition:width .5s ease;
+  }
+  .persons{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-top:6px;
+  }
+  .person-card{
+    border-radius:11px;
+    padding:12px 13px;
+    border:1px solid var(--line);
+  }
+  .person-card.p1{background:var(--teal-soft);}
+  .person-card.p2{background:var(--brick-soft);}
+  .person-name{
+    font-size:12.5px;
+    color:var(--muted);
+    margin-bottom:3px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
+  .dot.p1{background:var(--teal);}
+  .dot.p2{background:var(--brick);}
+  .person-amount{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:21px;
+  }
+  .person-goal-line{
+    font-size:11.5px;
+    color:var(--muted);
+    margin-top:6px;
+  }
+  .mini-track{
+    position:relative;
+    height:6px;
+    background:var(--bg);
+    border-radius:999px;
+    margin-top:5px;
+    overflow:hidden;
+    border:1px solid var(--line);
+  }
+  .mini-track-fill{
+    position:absolute;top:0;left:0;bottom:0;
+    border-radius:999px;
+    transition:width .5s ease;
+  }
+  .mini-track-fill.p1{background:var(--teal);}
+  .mini-track-fill.p2{background:var(--brick);}
+
+  .settings-toggle{
+    margin-top:18px;
+    text-align:left;
+  }
+  .settings-toggle button{
+    background:none;color:var(--muted);font-size:12.5px;
+    text-decoration:underline;text-decoration-color:var(--line);
+    padding:0;
+  }
+  .settings-panel{
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px solid var(--line);
+    display:none;
+  }
+  .settings-panel.open{display:block;}
+  .person-settings-block{
+    padding:12px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .person-settings-block:last-of-type{border-bottom:none;}
+  .field{margin-bottom:10px;}
+  .field label{
+    display:block;font-size:12px;color:var(--muted);margin-bottom:4px;
+  }
+  input[type=text], input[type=number], input[type=date]{
+    width:100%;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    background:var(--bg);
+    color:var(--ink);
+  }
+  input:focus{outline:2px solid var(--teal);outline-offset:1px;}
+  .save-settings{
+    background:var(--teal);color:#0B0C0A;padding:8px 14px;
+    border-radius:8px;font-size:13.5px;margin-top:4px;font-weight:600;
+  }
+  .save-settings:hover{background:var(--gold);}
+  .save-settings:disabled{background:var(--line);color:var(--muted);cursor:not-allowed;}
+
+  /* --- Formulario --- */
+  .form-title{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:19px;
+    margin:0 0 14px 0;
+  }
+  .form-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .person-select{
+    display:flex;gap:8px;
+  }
+  .person-pick{
+    flex:1;
+    padding:9px 8px;
+    border:1.5px solid var(--line);
+    border-radius:9px;
+    background:var(--surface);
+    color:var(--muted);
+    font-size:13.5px;
+    font-weight:500;
+    text-align:center;
+    transition:.15s;
+  }
+  .person-pick.active.p1{border-color:var(--teal);background:var(--teal-soft);color:var(--teal);}
+  .person-pick.active.p2{border-color:var(--brick);background:var(--brick-soft);color:var(--brick);}
+  .add-btn{
+    background:var(--teal);color:#0B0C0A;
+    padding:10px 18px;border-radius:9px;
+    font-size:14.5px;font-weight:600;
+    margin-top:4px;
+  }
+  .add-btn:hover{background:var(--gold);}
+  .add-btn:disabled{background:var(--line);color:var(--muted);cursor:not-allowed;}
+
+  /* --- Historial --- */
+  .history-card{margin-top:20px;}
+  .history-head{
+    display:flex;justify-content:space-between;align-items:baseline;
+    margin-bottom:10px;
+  }
+  .entry{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:11px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .entry:last-child{border-bottom:none;}
+  .entry .dot{flex:0 0 auto;width:9px;height:9px;}
+  .entry-who{flex:0 0 auto;font-size:13.5px;font-weight:500;width:70px;}
+  .entry-date{flex:0 0 auto;color:var(--muted);font-size:12.5px;width:88px;}
+  .entry-note{flex:1;color:var(--muted);font-size:13px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .entry-amount{
+    font-family:'Fraunces',serif;font-weight:600;font-size:16px;
+    flex:0 0 auto;
+  }
+  .entry-del{
+    background:none;color:var(--line);font-size:16px;
+    flex:0 0 auto;padding:2px 4px;line-height:1;
+  }
+  .entry-del:hover{color:var(--brick);}
+  .empty-state{
+    color:var(--muted);
+    font-size:14px;
+    padding:20px 0;
+    text-align:center;
+  }
+  .loading{color:var(--muted);font-size:14px;padding:16px 0;}
+  @media (max-width:480px){
+    .entry-note{display:none;}
+    .form-row{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1 id="pageTitle">Ahorro en pareja</h1>
+      <p class="subhead" id="pageSubhead">Cargando...</p>
+    </div>
+    <button class="icon-btn" id="resetBtn" title="Borrar todos los datos">Reiniciar datos</button>
+  </header>
+  <p class="status-line" id="statusLine"></p>
+
+  <div class="grid">
+
+    <!-- RESUMEN -->
+    <div class="card" id="resumenCard">
+      <div class="loading">Cargando resumen...</div>
+    </div>
+
+    <!-- FORMULARIO + HISTORIAL -->
+    <div>
+      <div class="card">
+        <p class="form-title">Registrar ahorro</p>
+        <div class="field">
+          <label>¿Quién ahorró?</label>
+          <div class="person-select" id="personSelect">
+            <button type="button" class="person-pick p1" data-p="1"></button>
+            <button type="button" class="person-pick p2" data-p="2"></button>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label>Cantidad</label>
+            <input type="number" id="amountInput" placeholder="0.00" min="0" step="0.01">
+          </div>
+          <div class="field">
+            <label>Fecha</label>
+            <input type="date" id="dateInput">
+          </div>
+        </div>
+        <div class="field">
+          <label>Nota (opcional)</label>
+          <input type="text" id="noteInput" placeholder="Ej. quincena, propina, extra...">
+        </div>
+        <button class="add-btn" id="addBtn">Agregar registro</button>
+      </div>
+
+      <div class="card history-card">
+        <div class="history-head">
+          <p class="form-title" style="margin:0;">Historial</p>
+          <span class="subhead" id="countLabel"></span>
+        </div>
+        <div id="historyList">
+          <div class="loading">Cargando historial...</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   CONFIGURACIÓN DE JSONBIN.IO
+   Rellena estos dos valores con los que te da tu cuenta:
+   ========================================================= */
+const JSONBIN_BIN_ID = '6a95e29af5f4af5e29596629';
+const JSONBIN_MASTER_KEY = '$2a$10$0F7DfN4Nr14Hd6n0vAf5hu114cujRy4hydn4w8CtacFgEPu9pqT16';
+/* ========================================================= */
+
+const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
+
+let state = {
+  settings: { name1: 'Pablo', name2: 'Eli', goal1: 4000, goal2: 4000 },
+  entries: []
+};
+let selectedPerson = 1;
+let saving = false;
+
+const fmt = (n) => '$' + Number(n || 0).toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtDate = (iso) => {
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'2-digit'});
+};
+
+function setStatus(text, isError){
+  const el = document.getElementById('statusLine');
+  el.textContent = text || '';
+  el.classList.toggle('error', !!isError);
+}
+
+async function loadAll(){
+  try {
+    setStatus('Cargando datos...');
+    const res = await fetch(JSONBIN_BASE + '/latest', {
+      headers: { 'X-Master-Key': JSONBIN_MASTER_KEY }
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (json && json.record && json.record.settings){
+      state = json.record;
+    }
+    setStatus('');
+  } catch(e) {
+    console.error('No se pudo cargar', e);
+    setStatus('No se pudo conectar con el guardado en la nube. Revisa tu conexión y recarga la página.', true);
+  }
+  render();
+}
+
+async function persistAll(){
+  saving = true;
+  updateSaveButtons();
+  try {
+    setStatus('Guardando...');
+    const res = await fetch(JSONBIN_BASE, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': JSONBIN_MASTER_KEY
+      },
+      body: JSON.stringify(state)
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    setStatus('');
+  } catch(e) {
+    console.error('No se pudo guardar', e);
+    setStatus('No se pudo guardar el cambio. Revisa tu conexión e inténtalo de nuevo.', true);
+  }
+  saving = false;
+  updateSaveButtons();
+}
+
+function updateSaveButtons(){
+  const addBtn = document.getElementById('addBtn');
+  if (addBtn) addBtn.disabled = saving;
+  const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+  if (saveSettingsBtn) saveSettingsBtn.disabled = saving;
+}
+
+function totals(){
+  const t1 = state.entries.filter(x=>x.person===1).reduce((a,b)=>a+Number(b.amount),0);
+  const t2 = state.entries.filter(x=>x.person===2).reduce((a,b)=>a+Number(b.amount),0);
+  return { t1, t2, total: t1+t2 };
+}
+
+function renderResumen(){
+  const settings = state.settings;
+  const { t1, t2, total } = totals();
+  const goal1 = Number(settings.goal1 || 0);
+  const goal2 = Number(settings.goal2 || 0);
+  const goalTotal = goal1 + goal2;
+  const pct = goalTotal > 0 ? Math.min(100, (total/goalTotal)*100) : 0;
+  const pct1 = goal1 > 0 ? Math.min(100, (t1/goal1)*100) : 0;
+  const pct2 = goal2 > 0 ? Math.min(100, (t2/goal2)*100) : 0;
+
+  document.getElementById('pageTitle').textContent =
+    (settings.name1 || 'Persona 1') + ' & ' + (settings.name2 || 'Persona 2');
+  document.getElementById('pageSubhead').textContent =
+    goalTotal > 0 ? 'Meta conjunta: ' + fmt(goalTotal) : 'Aún no has definido metas';
+
+  const card = document.getElementById('resumenCard');
+  card.innerHTML = `
+    <div class="hero-label">Total ahorrado</div>
+    <div class="hero-total">${fmt(total)}</div>
+    <div class="goal-line">
+      <span>${goalTotal>0 ? pct.toFixed(0)+'% de la meta conjunta' : 'Sin meta definida'}</span>
+      <strong>${goalTotal>0 ? fmt(goalTotal) : ''}</strong>
+    </div>
+    <div class="track"><div class="track-fill" style="width:${pct}%"></div></div>
+
+    <div class="persons">
+      <div class="person-card p1">
+        <div class="person-name"><span class="dot p1"></span>${settings.name1 || 'Persona 1'}</div>
+        <div class="person-amount">${fmt(t1)}</div>
+        <div class="person-goal-line">${goal1>0 ? pct1.toFixed(0)+'% de '+fmt(goal1) : 'Sin meta'}</div>
+        <div class="mini-track"><div class="mini-track-fill p1" style="width:${pct1}%"></div></div>
+      </div>
+      <div class="person-card p2">
+        <div class="person-name"><span class="dot p2"></span>${settings.name2 || 'Persona 2'}</div>
+        <div class="person-amount">${fmt(t2)}</div>
+        <div class="person-goal-line">${goal2>0 ? pct2.toFixed(0)+'% de '+fmt(goal2) : 'Sin meta'}</div>
+        <div class="mini-track"><div class="mini-track-fill p2" style="width:${pct2}%"></div></div>
+      </div>
+    </div>
+
+    <div class="settings-toggle">
+      <button type="button" id="toggleSettings">Editar nombres y metas</button>
+    </div>
+    <div class="settings-panel" id="settingsPanel">
+      <div class="person-settings-block">
+        <div class="field">
+          <label>Nombre persona 1</label>
+          <input type="text" id="name1Input" value="${settings.name1 || ''}">
+        </div>
+        <div class="field">
+          <label>Meta de ${settings.name1 || 'persona 1'}</label>
+          <input type="number" id="goal1Input" value="${settings.goal1 || ''}" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="person-settings-block">
+        <div class="field">
+          <label>Nombre persona 2</label>
+          <input type="text" id="name2Input" value="${settings.name2 || ''}">
+        </div>
+        <div class="field">
+          <label>Meta de ${settings.name2 || 'persona 2'}</label>
+          <input type="number" id="goal2Input" value="${settings.goal2 || ''}" min="0" step="0.01">
+        </div>
+      </div>
+      <button class="save-settings" id="saveSettingsBtn">Guardar</button>
+    </div>
+  `;
+
+  document.getElementById('toggleSettings').addEventListener('click', ()=>{
+    document.getElementById('settingsPanel').classList.toggle('open');
+  });
+  document.getElementById('saveSettingsBtn').addEventListener('click', async ()=>{
+    state.settings.name1 = document.getElementById('name1Input').value.trim() || 'Persona 1';
+    state.settings.name2 = document.getElementById('name2Input').value.trim() || 'Persona 2';
+    state.settings.goal1 = parseFloat(document.getElementById('goal1Input').value) || 0;
+    state.settings.goal2 = parseFloat(document.getElementById('goal2Input').value) || 0;
+    await persistAll();
+    render();
+  });
+}
+
+function renderPersonPicker(){
+  const settings = state.settings;
+  const p1btn = document.querySelector('.person-pick.p1');
+  const p2btn = document.querySelector('.person-pick.p2');
+  p1btn.textContent = settings.name1 || 'Persona 1';
+  p2btn.textContent = settings.name2 || 'Persona 2';
+  p1btn.classList.toggle('active', selectedPerson===1);
+  p2btn.classList.toggle('active', selectedPerson===2);
+}
+
+function renderHistory(){
+  const settings = state.settings;
+  const entries = state.entries;
+  const list = document.getElementById('historyList');
+  document.getElementById('countLabel').textContent =
+    entries.length ? entries.length + (entries.length===1 ? ' registro' : ' registros') : '';
+
+  if (!entries.length){
+    list.innerHTML = '<div class="empty-state">Todavía no hay registros. Agrega el primero arriba.</div>';
+    return;
+  }
+  const sorted = [...entries].sort((a,b)=> b.date.localeCompare(a.date) || String(b.id).localeCompare(String(a.id)));
+  list.innerHTML = sorted.map(e => `
+    <div class="entry">
+      <span class="dot ${e.person===1?'p1':'p2'}"></span>
+      <span class="entry-who">${e.person===1 ? (settings.name1||'P1') : (settings.name2||'P2')}</span>
+      <span class="entry-date">${fmtDate(e.date)}</span>
+      <span class="entry-note">${e.note ? e.note : ''}</span>
+      <span class="entry-amount">${fmt(e.amount)}</span>
+      <button class="entry-del" data-id="${e.id}" title="Eliminar">✕</button>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.entry-del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      state.entries = state.entries.filter(x=>String(x.id) !== btn.dataset.id);
+      await persistAll();
+      render();
+    });
+  });
+}
+
+function render(){
+  renderResumen();
+  renderPersonPicker();
+  renderHistory();
+  updateSaveButtons();
+}
+
+document.getElementById('personSelect').addEventListener('click', (ev)=>{
+  const btn = ev.target.closest('.person-pick');
+  if (!btn) return;
+  selectedPerson = Number(btn.dataset.p);
+  renderPersonPicker();
+});
+
+document.getElementById('dateInput').valueAsDate = new Date();
+
+document.getElementById('addBtn').addEventListener('click', async ()=>{
+  const amount = parseFloat(document.getElementById('amountInput').value);
+  const date = document.getElementById('dateInput').value;
+  const note = document.getElementById('noteInput').value.trim();
+
+  if (!amount || amount <= 0){
+    document.getElementById('amountInput').focus();
+    return;
+  }
+  if (!date){
+    document.getElementById('dateInput').focus();
+    return;
+  }
+
+  const entry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+    person: selectedPerson,
+    amount: amount,
+    date: date,
+    note: note
+  };
+  state.entries.push(entry);
+  await persistAll();
+
+  document.getElementById('amountInput').value = '';
+  document.getElementById('noteInput').value = '';
+  render();
+});
+
+document.getElementById('resetBtn').addEventListener('click', async ()=>{
+  if (!confirm('Esto borrará todos los registros y la configuración para ambos. ¿Continuar?')) return;
+  state = {
+    settings: { name1: 'Pablo', name2: 'Eli', goal1: 4000, goal2: 4000 },
+    entries: []
+  };
+  await persistAll();
+  render();
+});
+
+loadAll();
+</script>
+</body>
+</html>
