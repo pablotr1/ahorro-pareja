@@ -276,7 +276,7 @@
   .entry:last-child{border-bottom:none;}
   .entry .dot{flex:0 0 auto;width:9px;height:9px;}
   .entry-who{flex:0 0 auto;font-size:13.5px;font-weight:500;width:70px;}
-  .entry-date{flex:0 0 auto;color:var(--muted);font-size:12.5px;width:88px;}
+  .entry-date{flex:0 0 auto;color:var(--muted);font-size:12.5px;width:150px;}
   .entry-note{flex:1;color:var(--muted);font-size:13px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .entry-amount{
     font-family:'Fraunces',serif;font-weight:600;font-size:16px;
@@ -297,6 +297,8 @@
   @media (max-width:480px){
     .entry-note{display:none;}
     .form-row{grid-template-columns:1fr;}
+    .entry-date{width:auto;font-size:11.5px;}
+    .entry-who{width:56px;}
   }
 </style>
 </head>
@@ -382,7 +384,7 @@ let saving = false;
 const fmt = (n) => '$' + Number(n || 0).toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2});
 const fmtDate = (iso) => {
   const d = new Date(iso + 'T00:00:00');
-  return d.toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'2-digit'});
+  return d.toLocaleDateString('es-MX', {day:'numeric', month:'long', year:'numeric'});
 };
 
 function setStatus(text, isError){
