@@ -18,6 +18,8 @@
     --brick:#D08A6C;
     --brick-soft:#3A2620;
     --gold:#D9AE5A;
+    --danger:#E2574C;
+    --danger-soft:#3A2422;
     --radius:14px;
   }
   *{box-sizing:border-box;}
@@ -169,6 +171,7 @@
   .dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
   .dot.p1{background:var(--teal);}
   .dot.p2{background:var(--brick);}
+  .dot.expense{background:var(--danger);}
   .person-amount{
     font-family:'Fraunces',serif;
     font-weight:600;
@@ -333,6 +336,23 @@
     gap:10px;
     margin-bottom:10px;
   }
+  .type-select{
+    display:flex;gap:8px;
+  }
+  .type-pick{
+    flex:1;
+    padding:9px 8px;
+    border:1.5px solid var(--line);
+    border-radius:9px;
+    background:var(--surface);
+    color:var(--muted);
+    font-size:13.5px;
+    font-weight:600;
+    text-align:center;
+    transition:.15s;
+  }
+  .type-pick.save.active{border-color:var(--teal);background:var(--teal-soft);color:var(--teal);}
+  .type-pick.expense.active{border-color:var(--danger);background:var(--danger-soft);color:var(--danger);}
   .person-select{
     display:flex;gap:8px;
   }
@@ -358,6 +378,8 @@
   }
   .add-btn:hover{background:var(--gold);}
   .add-btn:disabled{background:var(--line);color:var(--muted);cursor:not-allowed;}
+  .add-btn.expense-btn{background:var(--danger);}
+  .add-btn.expense-btn:hover{background:#c94438;}
 
   /* --- Historial --- */
   .history-card{margin-top:20px;}
@@ -381,6 +403,7 @@
     font-family:'Fraunces',serif;font-weight:600;font-size:16px;
     flex:0 0 auto;
   }
+  .entry-amount.expense{color:var(--danger);}
   .entry-del{
     background:none;color:var(--line);font-size:16px;
     flex:0 0 auto;padding:2px 4px;line-height:1;
@@ -470,6 +493,38 @@
     font-size:10.5px;
     font-family:'Inter',sans-serif;
   }
+
+  .expense-rows{display:flex;flex-direction:column;gap:10px;}
+  .expense-row{
+    display:grid;
+    grid-template-columns:52px 1fr 74px;
+    align-items:center;
+    gap:10px;
+    font-size:12px;
+    color:var(--muted);
+  }
+  .expense-month{white-space:nowrap;}
+  .expense-track{
+    position:relative;
+    height:10px;
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:999px;
+    overflow:hidden;
+  }
+  .expense-fill{
+    position:absolute;top:0;right:0;bottom:0;
+    background:var(--danger);
+    border-radius:999px;
+    transition:width .5s ease;
+  }
+  .expense-amount{
+    text-align:right;
+    color:var(--danger);
+    font-weight:600;
+    font-family:'Fraunces',serif;
+    white-space:nowrap;
+  }
 </style>
 </head>
 <body>
@@ -494,9 +549,16 @@
     <!-- FORMULARIO + HISTORIAL -->
     <div>
       <div class="card">
-        <p class="form-title">Registrar ahorro</p>
+        <p class="form-title" id="formTitle">Registrar movimiento</p>
         <div class="field">
-          <label>¿Quién ahorró?</label>
+          <label>Tipo</label>
+          <div class="type-select" id="typeSelect">
+            <button type="button" class="type-pick save active" data-t="ahorro">+ Ahorro</button>
+            <button type="button" class="type-pick expense" data-t="gasto">− Gasto</button>
+          </div>
+        </div>
+        <div class="field">
+          <label id="personLabel">¿Quién ahorró?</label>
           <div class="person-select" id="personSelect">
             <button type="button" class="person-pick p1" data-p="1"></button>
             <button type="button" class="person-pick p2" data-p="2"></button>
@@ -513,10 +575,10 @@
           </div>
         </div>
         <div class="field">
-          <label>Nota (opcional)</label>
+          <label id="noteLabel">Nota (opcional)</label>
           <input type="text" id="noteInput" placeholder="Ej. quincena, propina, extra...">
         </div>
-        <button class="add-btn" id="addBtn">Agregar registro</button>
+        <button class="add-btn" id="addBtn">Agregar ahorro</button>
       </div>
 
       <div class="card history-card">
@@ -537,6 +599,11 @@
       <div class="card chart-card">
         <p class="form-title">Ahorro por mes</p>
         <div id="chartArea"></div>
+      </div>
+
+      <div class="card chart-card">
+        <p class="form-title">Gastos (retrocesos)</p>
+        <div id="expenseChartArea"></div>
       </div>
     </div>
 
@@ -559,6 +626,7 @@ let state = {
   entries: []
 };
 let selectedPerson = 1;
+let selectedType = 'ahorro';
 let saving = false;
 
 const fmt = (n) => '$' + Math.round(Number(n) || 0).toLocaleString('es-MX');
@@ -684,8 +752,9 @@ function updateSaveButtons(){
 }
 
 function totals(){
-  const t1 = state.entries.filter(x=>x.person===1).reduce((a,b)=>a+Number(b.amount),0);
-  const t2 = state.entries.filter(x=>x.person===2).reduce((a,b)=>a+Number(b.amount),0);
+  const signed = (e) => e.type === 'gasto' ? -Number(e.amount) : Number(e.amount);
+  const t1 = state.entries.filter(x=>x.person===1).reduce((a,b)=>a+signed(b),0);
+  const t2 = state.entries.filter(x=>x.person===2).reduce((a,b)=>a+signed(b),0);
   return { t1, t2, total: t1+t2 };
 }
 
@@ -914,6 +983,19 @@ function renderPersonPicker(){
   p2btn.classList.toggle('active', selectedPerson===2);
 }
 
+function applyTypeUI(){
+  const isExpense = selectedType === 'gasto';
+  document.querySelector('.type-pick.save').classList.toggle('active', !isExpense);
+  document.querySelector('.type-pick.expense').classList.toggle('active', isExpense);
+  document.getElementById('formTitle').textContent = isExpense ? 'Registrar gasto' : 'Registrar ahorro';
+  document.getElementById('personLabel').textContent = isExpense ? '¿Quién gastó?' : '¿Quién ahorró?';
+  document.getElementById('noteLabel').textContent = isExpense ? 'Motivo del gasto' : 'Nota (opcional)';
+  document.getElementById('noteInput').placeholder = isExpense ? 'Ej. imprevisto, préstamo, emergencia...' : 'Ej. quincena, propina, extra...';
+  const addBtn = document.getElementById('addBtn');
+  addBtn.textContent = isExpense ? 'Agregar gasto' : 'Agregar ahorro';
+  addBtn.classList.toggle('expense-btn', isExpense);
+}
+
 function renderHistory(){
   const settings = state.settings;
   const entries = state.entries;
@@ -926,16 +1008,19 @@ function renderHistory(){
     return;
   }
   const sorted = [...entries].sort((a,b)=> b.date.localeCompare(a.date) || String(b.id).localeCompare(String(a.id)));
-  list.innerHTML = sorted.map(e => `
+  list.innerHTML = sorted.map(e => {
+    const isExpense = e.type === 'gasto';
+    return `
     <div class="entry">
-      <span class="dot ${e.person===1?'p1':'p2'}"></span>
+      <span class="dot ${isExpense ? 'expense' : (e.person===1?'p1':'p2')}"></span>
       <span class="entry-who">${e.person===1 ? (settings.name1||'P1') : (settings.name2||'P2')}</span>
       <span class="entry-date">${fmtDate(e.date)}</span>
-      <span class="entry-note">${e.note ? e.note : ''}</span>
-      <span class="entry-amount">${fmt(e.amount)}</span>
+      <span class="entry-note">${isExpense ? '(gasto) ' : ''}${e.note ? e.note : ''}</span>
+      <span class="entry-amount ${isExpense ? 'expense' : ''}">${isExpense ? '−' : ''}${fmt(e.amount)}</span>
       <button class="entry-del" data-id="${e.id}" title="Eliminar">✕</button>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   list.querySelectorAll('.entry-del').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
@@ -946,13 +1031,20 @@ function renderHistory(){
   });
 }
 
+function monthLabelFromKey(key){
+  const [y, m] = key.split('-');
+  const d = new Date(Number(y), Number(m)-1, 1);
+  const label = d.toLocaleDateString('es-MX', { month:'short' });
+  return label.charAt(0).toUpperCase() + label.slice(1).replace('.','');
+}
+
 function renderChart(){
   const settings = state.settings;
-  const entries = state.entries;
+  const entries = state.entries.filter(e => e.type !== 'gasto');
   const area = document.getElementById('chartArea');
 
   if (!entries.length){
-    area.innerHTML = '<div class="empty-state">Aún no hay datos suficientes para graficar.</div>';
+    area.innerHTML = '<div class="empty-state">Aún no hay ahorros registrados para graficar.</div>';
     return;
   }
 
@@ -972,13 +1064,6 @@ function renderChart(){
   const groupW = barW*2 + gap;
   const totalW = shown.length*groupW + Math.max(0, shown.length-1)*groupGap + leftPad*2;
 
-  const monthLabel = (key) => {
-    const [y, m] = key.split('-');
-    const d = new Date(Number(y), Number(m)-1, 1);
-    const label = d.toLocaleDateString('es-MX', { month:'short' });
-    return label.charAt(0).toUpperCase() + label.slice(1).replace('.','');
-  };
-
   let bars = '';
   shown.forEach((key, i) => {
     const x = leftPad + i*(groupW+groupGap);
@@ -987,7 +1072,7 @@ function renderChart(){
     bars += `
       <rect x="${x}" y="${topPad+chartH-h1}" width="${barW}" height="${Math.max(h1,1)}" rx="3" fill="var(--teal)"></rect>
       <rect x="${x+barW+gap}" y="${topPad+chartH-h2}" width="${barW}" height="${Math.max(h2,1)}" rx="3" fill="var(--brick)"></rect>
-      <text x="${x+barW+gap/2}" y="${topPad+chartH+18}" text-anchor="middle" class="chart-month-label">${monthLabel(key)}</text>
+      <text x="${x+barW+gap/2}" y="${topPad+chartH+18}" text-anchor="middle" class="chart-month-label">${monthLabelFromKey(key)}</text>
     `;
   });
 
@@ -1000,6 +1085,40 @@ function renderChart(){
       ${bars}
     </svg>
   `;
+}
+
+function renderExpenseChart(){
+  const expenses = state.entries.filter(e => e.type === 'gasto');
+  const area = document.getElementById('expenseChartArea');
+
+  if (!expenses.length){
+    area.innerHTML = '<div class="empty-state">No hay gastos registrados. ¡Bien ahí!</div>';
+    return;
+  }
+
+  const map = {};
+  expenses.forEach(e=>{
+    const key = e.date.slice(0,7);
+    if (!map[key]) map[key] = 0;
+    map[key] += Number(e.amount);
+  });
+
+  const keys = Object.keys(map).sort();
+  const shown = keys.slice(-6).reverse(); // más reciente arriba
+  const maxVal = Math.max(1, ...shown.map(k => map[k]));
+
+  const rows = shown.map(key => {
+    const pct = Math.max(4, (map[key]/maxVal)*100);
+    return `
+      <div class="expense-row">
+        <span class="expense-month">${monthLabelFromKey(key)}</span>
+        <div class="expense-track"><div class="expense-fill" style="width:${pct}%"></div></div>
+        <span class="expense-amount">−${fmt(map[key])}</span>
+      </div>
+    `;
+  }).join('');
+
+  area.innerHTML = `<div class="expense-rows">${rows}</div>`;
 }
 
 function renderRoadmap(){
@@ -1062,6 +1181,7 @@ function render(){
   renderHistory();
   renderRoadmap();
   renderChart();
+  renderExpenseChart();
   updateSaveButtons();
 }
 
@@ -1071,6 +1191,14 @@ document.getElementById('personSelect').addEventListener('click', (ev)=>{
   selectedPerson = Number(btn.dataset.p);
   renderPersonPicker();
 });
+
+document.getElementById('typeSelect').addEventListener('click', (ev)=>{
+  const btn = ev.target.closest('.type-pick');
+  if (!btn) return;
+  selectedType = btn.dataset.t;
+  applyTypeUI();
+});
+applyTypeUI();
 
 document.getElementById('dateInput').valueAsDate = new Date();
 
@@ -1087,10 +1215,15 @@ document.getElementById('addBtn').addEventListener('click', async ()=>{
     document.getElementById('dateInput').focus();
     return;
   }
+  if (selectedType === 'gasto' && !note){
+    document.getElementById('noteInput').focus();
+    return;
+  }
 
   const entry = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
     person: selectedPerson,
+    type: selectedType,
     amount: amount,
     date: date,
     note: note
